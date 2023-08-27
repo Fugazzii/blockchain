@@ -13,9 +13,11 @@
   "devDependencies": {
     "@types/elliptic": "^6.4.14",
     "@types/node": "^20.5.6",
+    "@types/ws": "^8.5.5",
     "tsx": "^3.12.7"
   },
   "dependencies": {
-    "elliptic": "^6.5.4"
+    "elliptic": "^6.5.4",
+    "ws": "^8.13.0"
   }
 }
