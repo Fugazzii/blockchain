@@ -44,4 +44,8 @@ export class Transaction implements TransactionInterface {
         const publicKey = this.elliptic.keyFromPublic(this.fromAddr);
         return publicKey.verify(this.calculateHash(), this.signature);
     }
+
+    public getAmount() { return this.amount; }
+    public getFromAddr() { return this.fromAddr; }
+    public getToAddr() { return this.toAddr; }
 }

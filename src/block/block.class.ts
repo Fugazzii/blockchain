@@ -37,4 +37,8 @@ export class Block implements BlockInterface {
             .digest("hex");
     }
 
+    public getHash() { return this.hash; }
+    public getNonce() { return this.nonce };
+
+
 }

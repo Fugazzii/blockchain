@@ -1,12 +1,12 @@
 import { EllipticCurve } from "./ec.interface";
-import { ec as elliptic } from "elliptic";
+import EC from "elliptic";
 
 export class Secp256k1 implements EllipticCurve {
     
-    private ec: elliptic;
+    private ec: EC.ec;
 
     public constructor() {
-        this.ec = new elliptic("secp256k1");
+        this.ec = new EC.ec("secp256k1");
     }
 
     public keyFromPublic(pk: string) {
