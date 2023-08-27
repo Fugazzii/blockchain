@@ -1,6 +1,6 @@
 import crypto from "node:crypto";
 import { EllipticCurve } from "../ec";
-import { Transaction as TransactionInterface } from "./";
+import { TransactionInterface } from "./";
 
 export class Transaction implements TransactionInterface {  
 

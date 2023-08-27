@@ -1,3 +1,3 @@
-export interface Blockchain {
+export interface BlockchainInterface {
     run(): Promise<void>;
 }

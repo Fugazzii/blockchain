@@ -1,14 +1,15 @@
 import crypto from "node:crypto";
-import { Transaction } from "../transaction";
+import { TransactionInterface } from "../transaction";
+import { BlockInterface } from "./block.interface";
 
-export class Block {
+export class Block implements BlockInterface {
     
     private hash: string;
     private nonce: number;
     
     public constructor(
         private timestamp: number,
-        private transactions: Array<Transaction>,
+        private transactions: Array<TransactionInterface>,
         private prevHash: string = ""
     ) {
         this.nonce = 0;
