@@ -21,8 +21,6 @@ export class Block implements BlockInterface {
             this.nonce++;
             this.hash = this.calculateHash();
         }
-      
-        console.log(`Block mined: ${this.hash}`);
     }
 
     private calculateHash(): string {

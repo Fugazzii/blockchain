@@ -64,19 +64,23 @@ export class Blockchain implements Node {
     public addresses: Array<string>;
 
     /*
-        * Event emitter to handle event-driven architecture
+        * Difficulty coefficient for generating and finding next hash
     */
-    private readonly emitter: EventEmitter;
+    public difficulty: number;
 
     /** 
+     * @param listener
+     * This is responsible for getting and listening data from another nodes
+     * @param gossiper
+     * This is responsible for announcing and broadcasting data up to other nodes
      * @param elliptic 
         * We need some elliptic curve to handle cryptography
         * Let's use **secp256k1** as it is used in Bitcoin
      * @returns Blockchain 
      */
     public constructor(
-        private readonly server: NodeServerInterface,
-        private readonly client: NodeClientInterface,
+        private readonly listener: NodeServerInterface,
+        private readonly gossiper: NodeClientInterface,
         private readonly elliptic: EllipticCurve = new Secp256k1()
     ) {
         this.nodeToBalance = new Map<string, number>();
@@ -84,16 +88,17 @@ export class Blockchain implements Node {
         this.pendingTransactions = new Array<TransactionInterface>();
         this.chain = this.genesisBlock();
         this.addresses = new Array<string>();
-        this.emitter = new EventEmitter();
         
         this.addr = this.getIpAddr();
         this.balance = 0;
 
         this.keypair = this.elliptic.generateKeyPair();
+        this.difficulty = 5;
     }
 
     public start() {
         this.listen();
+        this.listener.listen(3333);
 
         while(true) {
             this.mine();
@@ -101,35 +106,33 @@ export class Blockchain implements Node {
     }
 
     public addNode(node: Node): void {
-        this.emitter.emit("new_node", node);
+        this.listener.emit("new_node", node);
     }
 
     public addTransaction(tx: TransactionInterface): void {
-        this.emitter.emit("new_transaction", tx);
+        this.listener.emit("new_transaction", tx);
     }
     
     private mine() {
         const next = new Block(Date.now(), this.pendingTransactions, this.latestBlock.getHash());
-        next.mineBlock(5);
+        next.mineBlock(this.difficulty);
 
-        this.emitter.emit("block_mined", next);
+        this.listener.emit("block_mined", next);
     }
 
     private listen() {
-        this.emitter.on("block_mined",  this.handleNewBlock.bind(this));
-        this.emitter.on("new_transaction", this.handleNewTransaction.bind(this));
-        this.emitter.on("new_node", this.handleNewNode.bind(this));
-
-        this.server.on("block_mined", this.handleNewBlock.bind(this));
-        this.server.on("new_transaction", this.handleNewTransaction.bind(this));
-        this.server.on("new_node", this.handleNewNode.bind(this));
+        this.listener.on("block_mined", this.handleNewBlock.bind(this));
+        this.listener.on("new_transaction", this.handleNewTransaction.bind(this));
+        this.listener.on("new_node", this.handleNewNode.bind(this));
     }
 
     /** HANDLERS */
 
     private handleNewBlock(block: BlockInterface) {
         this.chain.push(block);
-        this.client.broadcast(this.addresses, block);
+        this.gossiper.broadcast(this.addresses, block);
+
+        log(`Mined:`, block);
     }
 
     private handleNewTransaction(tx: TransactionInterface) {
@@ -143,7 +146,7 @@ export class Blockchain implements Node {
 
         this.transactionsHistory.push(tx);
 
-        this.client.broadcast(this.addresses, tx);
+        this.gossiper.broadcast(this.addresses, tx);
 
         log(`New Transaction: ${tx}`);
     }
