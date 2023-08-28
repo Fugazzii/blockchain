@@ -8,7 +8,7 @@
     "dev": "tsx --watch ./src/main.ts"
   },
   "keywords": [],
-  "author": "",
+  "author": "Ilia Sichinava",
   "license": "ISC",
   "devDependencies": {
     "@types/elliptic": "^6.4.14",
