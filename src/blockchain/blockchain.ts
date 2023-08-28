@@ -6,7 +6,7 @@ import { TransactionInterface } from "../transaction";
 import { Node } from "./blockchain.interface";
 import { Block, BlockInterface } from "../block";
 import { EllipticCurve, Secp256k1, keyPair } from "../ec";
-import { NodeClientInterface, NodeServerInterface } from "../transport/tcp";
+import { NodeClientInterface, NodeServerInterface } from "../transport";
 
 export class Blockchain implements Node {
 
