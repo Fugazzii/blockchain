@@ -7,6 +7,7 @@ import { Node } from "./blockchain.interface";
 import { Block, BlockInterface } from "../block";
 import { EllipticCurve, Secp256k1, keyPair } from "../ec";
 import { NodeClientInterface, NodeServerInterface } from "../transport";
+import { BLOCKCHAIN_EVENT } from "./blockchian.events";
 
 export class Blockchain implements Node {
 
@@ -106,24 +107,24 @@ export class Blockchain implements Node {
     }
 
     public addNode(node: Node): void {
-        this.listener.emit("new_node", node);
+        this.listener.emit(BLOCKCHAIN_EVENT.NEW_NODE_ADDED, node);
     }
 
     public addTransaction(tx: TransactionInterface): void {
-        this.listener.emit("new_transaction", tx);
+        this.listener.emit(BLOCKCHAIN_EVENT.TRANSACTION_PERFORMED, tx);
     }
     
     private mine() {
         const next = new Block(Date.now(), this.pendingTransactions, this.latestBlock.getHash());
         next.mineBlock(this.difficulty);
 
-        this.listener.emit("block_mined", next);
+        this.listener.emit(BLOCKCHAIN_EVENT.BLOCK_MINED, next);
     }
 
     private listen() {
-        this.listener.on("block_mined", this.handleNewBlock.bind(this));
-        this.listener.on("new_transaction", this.handleNewTransaction.bind(this));
-        this.listener.on("new_node", this.handleNewNode.bind(this));
+        this.listener.on(BLOCKCHAIN_EVENT.BLOCK_MINED, this.handleNewBlock.bind(this));
+        this.listener.on(BLOCKCHAIN_EVENT.TRANSACTION_PERFORMED, this.handleNewTransaction.bind(this));
+        this.listener.on(BLOCKCHAIN_EVENT.NEW_NODE_ADDED, this.handleNewNode.bind(this));
     }
 
     /** HANDLERS */
