@@ -6,6 +6,7 @@ import { TransactionInterface } from "../transaction";
 import { Node } from "./blockchain.interface";
 import { Block, BlockInterface } from "../block";
 import { EllipticCurve, Secp256k1, keyPair } from "../ec";
+import { NodeClientInterface, NodeServerInterface } from "../transport";
 
 export class Blockchain implements Node {
 
@@ -21,10 +22,14 @@ export class Blockchain implements Node {
         * Ip address of the node
         * Without public ip address, it would be impossible to establish communication between nodes 
     */
-    public addr: string; 
+    public addr: string;
+    
+    /* 
+        * Balance of the current node
+    */
     public balance: number;
 
-    
+
     /** Information about other nodes in the chain */
 
     /*
@@ -63,18 +68,20 @@ export class Blockchain implements Node {
     */
     private readonly emitter: EventEmitter;
 
+    /** 
+     * @param elliptic 
+        * We need some elliptic curve to handle cryptography
+        * Let's use **secp256k1** as it is used in Bitcoin
+     * @returns Blockchain 
+     */
     public constructor(
-        /*
-            * We need some elliptic curve to handle cryptography
-            * Let's use secp256k1 as it is used in Bitcoin
-        */
+        private readonly server: NodeServerInterface,
+        private readonly client: NodeClientInterface,
         private readonly elliptic: EllipticCurve = new Secp256k1()
     ) {
         this.nodeToBalance = new Map<string, number>();
-
         this.transactionsHistory = new Array<TransactionInterface>();
         this.pendingTransactions = new Array<TransactionInterface>();
-
         this.chain = this.genesisBlock();
         this.addresses = new Array<string>();
         this.emitter = new EventEmitter();
@@ -88,9 +95,9 @@ export class Blockchain implements Node {
     public start() {
         this.listen();
 
-        // while(true) {
-        //     this.mine();
-        // }
+        while(true) {
+            this.mine();
+        }
     }
 
     public addNode(node: Node): void {
@@ -104,20 +111,25 @@ export class Blockchain implements Node {
     private mine() {
         const next = new Block(Date.now(), this.pendingTransactions, this.latestBlock.getHash());
         next.mineBlock(5);
-        this.chain.push(next);
+
         this.emitter.emit("block_mined", next);
     }
 
     private listen() {
-        this.emitter.on("block_mined", this.handleNewBlock.bind(this));
+        this.emitter.on("block_mined",  this.handleNewBlock.bind(this));
         this.emitter.on("new_transaction", this.handleNewTransaction.bind(this));
         this.emitter.on("new_node", this.handleNewNode.bind(this));
+
+        this.server.on("block_mined", this.handleNewBlock.bind(this));
+        this.server.on("new_transaction", this.handleNewTransaction.bind(this));
+        this.server.on("new_node", this.handleNewNode.bind(this));
     }
 
     /** HANDLERS */
 
     private handleNewBlock(block: BlockInterface) {
-        log(`New block: ${block}`);
+        this.chain.push(block);
+        this.client.broadcast(this.addresses, block);
     }
 
     private handleNewTransaction(tx: TransactionInterface) {
@@ -131,6 +143,8 @@ export class Blockchain implements Node {
 
         this.transactionsHistory.push(tx);
 
+        this.client.broadcast(this.addresses, tx);
+
         log(`New Transaction: ${tx}`);
     }
 
@@ -141,6 +155,12 @@ export class Blockchain implements Node {
 
     /** HELPERS */
 
+    /**
+     * 
+     * @param address string
+     * @param amount number
+     * @returns boolean
+     */
     private hasSufficientBalance(address: string, amount: number) {
         
         let currentBalance = this.nodeToBalance.get(address) as number;
@@ -167,19 +187,33 @@ export class Blockchain implements Node {
         return futureBalance >= 0;
     }
 
-    private genesisBlock() {
+
+    /**
+     * @returns Array with genesis block
+     */
+    private genesisBlock(): Array<BlockInterface> {
         const genesis = new Block(Date.now(), [], "0");
         return new Array<BlockInterface>(genesis); 
     }
 
+    /**
+     * @returns Ip address of the current node
+    */
     private getIpAddr() {
         const result = networkInterfaces().wlp2s0 as Array<NetworkInterfaceInfo>;
         return result[0].address;
     }
 
+    /**
+     * Retreive public key
+     * @returns string
+    */
     public get publicKey() {
         return this.keypair.publicKey;
     }
 
+    /**
+     * @returns BlockInterface
+     */
     private get latestBlock() { return this.chain[this.chain.length - 1]; }
 }
