@@ -97,6 +97,9 @@ export class Blockchain implements Node {
         this.difficulty = 5;
     }
 
+    /*
+        * Method that connects you to the blockchain network and immediately starts mining
+    */
     public start() {
         this.listen();
         this.listener.listen(3333);
@@ -106,14 +109,24 @@ export class Blockchain implements Node {
         }
     }
 
+    /*
+        * If one wants to connect to the blockchain network, somebody in the blockchain has to add them.
+        * This is because some node needs to announce that new node with some IP address is going to be added in the network
+    */
     public addNode(node: Node): void {
         this.listener.emit(BLOCKCHAIN_EVENT.NEW_NODE_ADDED, node);
     }
 
-    public addTransaction(tx: TransactionInterface): void {
-        this.listener.emit(BLOCKCHAIN_EVENT.TRANSACTION_PERFORMED, tx);
+    /*
+        * Add new transaction in the pending transactions
+    */
+    public addTransaction(tx: TransactionInterface, sk: string): void {
+        this.listener.emit(BLOCKCHAIN_EVENT.TRANSACTION_PERFORMED, tx, sk);
     }
     
+    /*
+        * Method that starts mining your machine
+    */
     private mine() {
         const next = new Block(Date.now(), this.pendingTransactions, this.latestBlock.getHash());
         next.mineBlock(this.difficulty);
@@ -121,6 +134,12 @@ export class Blockchain implements Node {
         this.listener.emit(BLOCKCHAIN_EVENT.BLOCK_MINED, next);
     }
 
+    /*
+        * Listen for outcoming information in the blockchain like:
+        * 1. New block mining
+        * 2. New transaction
+        * 3. New node addition in the network
+    */
     private listen() {
         this.listener.on(BLOCKCHAIN_EVENT.BLOCK_MINED, this.handleNewBlock.bind(this));
         this.listener.on(BLOCKCHAIN_EVENT.TRANSACTION_PERFORMED, this.handleNewTransaction.bind(this));
@@ -129,16 +148,37 @@ export class Blockchain implements Node {
 
     /** HANDLERS */
 
+    /*
+        * This is the handler when somebody in the network found the hash.
+        * We are checking all pending txs and adding it into history
+        * Then announcing it to all nodes in the blockchain
+        * Also failed txs are logged as well
+    */
     private handleNewBlock(block: BlockInterface) {
+
+        const validTransactions = new Array<TransactionInterface>();
+        const invalidTransactions = new Array<TransactionInterface>();
+
+        for(let tx of this.pendingTransactions) {
+            tx.isValid() ? validTransactions.push(tx) : invalidTransactions.push(tx);
+        }
+    
         this.chain.push(block);
+        this.transactionsHistory = [...this.transactionsHistory, ...validTransactions];
         this.gossiper.broadcast(this.addresses, block);
-
-        // TODO: check if all transactions are signed and valid
-
+    
         log(`Mined:`, block);
+    
+        if (invalidTransactions.length > 0) log(`Invalid transactions:`, invalidTransactions);
+
+        this.pendingTransactions = [];
     }
 
-    private handleNewTransaction(tx: TransactionInterface) {
+    /*
+        * Method that handles new txs addition in pending transaction
+        * We are checking if user has sufficient coins to perform transaction
+    */
+    private handleNewTransaction(tx: TransactionInterface, sk: string) {
     
         if(!tx.isValid()) throw new Error("Invalid transaction");
 
@@ -147,16 +187,16 @@ export class Blockchain implements Node {
 
         if(!this.hasSufficientBalance(from.addr, amount)) throw new Error("Insufficient balance");
 
-
-        // TODO: Sign transaction
+        tx.sign(sk);
         
-        this.transactionsHistory.push(tx);
-
         this.gossiper.broadcast(this.addresses, tx);
 
         log(`New Transaction: ${tx}`);
     }
 
+    /*
+        * Adds and announces addition of the new node in the network
+    */
     private handleNewNode(node: Node) {
         this.nodeToBalance.set(node.publicKey, 0);
         log(`${node.addr} has been added to chain`);

@@ -6,7 +6,7 @@ import { Node } from "../blockchain";
 export class Transaction implements TransactionInterface {  
 
     private readonly timestamp: number;
-    private signature: any;
+    private signature: string | null;
 
     public constructor(
         private readonly from: Node | null,
@@ -15,6 +15,7 @@ export class Transaction implements TransactionInterface {
         private readonly elliptic: EllipticCurve
     ) {
         this.timestamp = Date.now();
+        this.signature = null;
     }
 
     public calculateHash() {
@@ -22,6 +23,17 @@ export class Transaction implements TransactionInterface {
             .createHash('sha256')
             .update(this.from?.addr + this.to.addr + this.amount + this.timestamp)
             .digest('hex');
+    }
+
+    public sign(sk: string) {
+        if (this.from === null) {
+            throw new Error('Cannot sign a coinbase transaction');
+        }
+
+        const hashToSign = this.calculateHash();
+        const key = this.elliptic.keyFromPrivate(sk);
+
+        this.signature = key.sign(hashToSign).toDER('hex');
     }
 
     public isValid(): boolean {

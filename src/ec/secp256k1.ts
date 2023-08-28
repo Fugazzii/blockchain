@@ -13,6 +13,10 @@ export class Secp256k1 implements EllipticCurve {
         return this.ec.keyFromPublic(pk);
     }
 
+    public keyFromPrivate(sk: string) {
+        return this.ec.keyFromPrivate(sk);
+    }
+
     public generateKeyPair() {
         const keyPair = this.ec.genKeyPair();
         const publicKey = keyPair.getPublic('hex');

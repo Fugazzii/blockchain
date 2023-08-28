@@ -19,8 +19,5 @@ const somebody: Node = new Blockchain(transportServer, transportClient);
 
 me.start();
 
-/*
-    * If one wants to connect to the blockchain network, somebody in the blockchain has to add them.
-    * This is because some node needs to announce that new node with some IP address is going to be added in the network
-*/
+
 me.addNode(somebody);

@@ -12,7 +12,7 @@ export interface Node {
 
     start(): void;
     addNode(addr: Node): void;
-    addTransaction(tx: TransactionInterface): void;
+    addTransaction(tx: TransactionInterface, sk: string): void;
     get publicKey(): string;
 
 }
