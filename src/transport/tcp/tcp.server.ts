@@ -1,5 +1,5 @@
 import net from "node:net";
-import { NodeServerInterface } from "./interfaces";
+import { NodeServerInterface } from "../interfaces";
 
 export class TcpServer implements NodeServerInterface {
     

@@ -1,7 +1,7 @@
 import net from "node:net";
-import { NodeClientInterface } from "./interfaces";
-import { BlockInterface } from "../block";
-import { TransactionInterface } from "../transaction";
+import { NodeClientInterface } from "../interfaces";
+import { BlockInterface } from "../../block";
+import { TransactionInterface } from "../../transaction";
 
 export class TcpClient implements NodeClientInterface {
     
