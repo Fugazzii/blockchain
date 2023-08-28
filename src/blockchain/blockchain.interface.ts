@@ -1,4 +1,3 @@
-import { Server as WebSocketServer } from "ws";
 import { TransactionInterface } from "../transaction";
 import { BlockInterface } from "../block/block.interface";
 
@@ -7,8 +6,6 @@ export interface Node {
     transactionsHistory: Array<TransactionInterface>;
     chain: Array<BlockInterface>;
     addresses: Array<string>;
-
-    server: WebSocketServer;
 
     start(): void;
     addNode(addr: string): void;
