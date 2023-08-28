@@ -9,6 +9,8 @@ import { Block, BlockInterface } from "../block";
 export class Blockchain implements Node {
 
     public addr: string;
+    public balance: number;
+
     public nodeToBalance: Map<Node, number>;
     public transactionsHistory: Array<TransactionInterface>;
     private pendingTransactions: Array<TransactionInterface>;
@@ -28,6 +30,7 @@ export class Blockchain implements Node {
         this.emitter = new EventEmitter();
         
         this.addr = this.getIpAddr();
+        this.balance = 0;
     }
 
     public start() {
@@ -45,17 +48,7 @@ export class Blockchain implements Node {
     public addTransaction(tx: TransactionInterface): void {
         this.emitter.emit("new_transaction", tx);
     }
-
-    private listen() {
-        this.emitter.on("block_mined", (block: BlockInterface) => {
-            log(`New block: ${block}`);
-        });
-
-        this.emitter.on("new_transaction", (tx: TransactionInterface) => this.handleNewTransaction(tx));
-
-        this.emitter.on("new_node", (node: Node) => this.handleNewNode(node));
-    }
-
+    
     private mine() {
         const next = new Block(Date.now(), this.pendingTransactions, this.latestBlock.getHash());
         next.mineBlock(5);
@@ -63,8 +56,26 @@ export class Blockchain implements Node {
         this.emitter.emit("block_mined", next);
     }
 
+    private listen() {
+        this.emitter.on("block_mined", this.handleNewBlock.bind(this));
+        this.emitter.on("new_transaction", this.handleNewTransaction.bind(this));
+        this.emitter.on("new_node", this.handleNewNode.bind(this));
+    }
+
+    /** HANDLERS */
+
+    private handleNewBlock(block: BlockInterface) {
+        log(`New block: ${block}`);
+    }
+
     private handleNewTransaction(tx: TransactionInterface) {
+    
+        const from = tx.getFromAddr();
+        const to = tx.getToAddr();
+        const amount = tx.getAmount();
+
         this.transactionsHistory.push(tx);
+
         log(`New Transaction: ${tx}`);
     }
 
@@ -72,6 +83,8 @@ export class Blockchain implements Node {
         this.nodeToBalance.set(node, 0);
         log(`${node.addr} has been added to chain`);
     }
+
+    /** HELPERS */
 
     private genesisBlock() {
         const genesis = new Block(Date.now(), [], "0");

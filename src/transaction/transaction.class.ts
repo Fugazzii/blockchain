@@ -1,6 +1,7 @@
 import crypto from "node:crypto";
 import { EllipticCurve } from "../ec";
 import { TransactionInterface } from "./";
+import { Node } from "../blockchain";
 
 export class Transaction implements TransactionInterface {  
 
@@ -8,8 +9,8 @@ export class Transaction implements TransactionInterface {
     private signature: any;
 
     public constructor(
-        private readonly fromAddr: string,
-        private readonly toAddr: string,
+        private readonly from: Node | null,
+        private readonly to: Node,
         private readonly amount: number,
         private readonly elliptic: EllipticCurve
     ) {
@@ -19,33 +20,22 @@ export class Transaction implements TransactionInterface {
     public calculateHash() {
         return crypto
             .createHash('sha256')
-            .update(this.fromAddr + this.toAddr + this.amount + this.timestamp)
+            .update(this.from?.addr + this.to.addr + this.amount + this.timestamp)
             .digest('hex');
     }
 
-    public sign(key: any) {
-        if(key.getPublic("hex") !== this.fromAddr) {
-            throw new Error("You cannot sign transactions for other wallets!")
-        }
-
-        const hashTx = this.calculateHash();
-        const sig = key.sign(hashTx, "base64");
-
-        this.signature = sig.toDER("hex");
-    }
-
     public isValid(): boolean {
-        if (this.fromAddr === null) return true;
+        if (this.from === null) return true;
 
         if (!this.signature || this.signature.length === 0) {
         throw new Error('No signature in this transaction');
         }
 
-        const publicKey = this.elliptic.keyFromPublic(this.fromAddr);
+        const publicKey = this.elliptic.keyFromPublic(this.from.addr);
         return publicKey.verify(this.calculateHash(), this.signature);
     }
 
     public getAmount() { return this.amount; }
-    public getFromAddr() { return this.fromAddr; }
-    public getToAddr() { return this.toAddr; }
+    public getFromAddr() { return this.from as Node; }
+    public getToAddr() { return this.to; }
 }
