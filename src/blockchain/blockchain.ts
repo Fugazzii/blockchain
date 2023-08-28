@@ -133,6 +133,8 @@ export class Blockchain implements Node {
         this.chain.push(block);
         this.gossiper.broadcast(this.addresses, block);
 
+        // TODO: check if all transactions are signed and valid
+
         log(`Mined:`, block);
     }
 
@@ -145,6 +147,9 @@ export class Blockchain implements Node {
 
         if(!this.hasSufficientBalance(from.addr, amount)) throw new Error("Insufficient balance");
 
+
+        // TODO: Sign transaction
+        
         this.transactionsHistory.push(tx);
 
         this.gossiper.broadcast(this.addresses, tx);
@@ -190,7 +195,6 @@ export class Blockchain implements Node {
 
         return futureBalance >= 0;
     }
-
 
     /**
      * @returns Array with genesis block

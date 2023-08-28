@@ -28,7 +28,7 @@ export class Transaction implements TransactionInterface {
         if (this.from === null) return true;
 
         if (!this.signature || this.signature.length === 0) {
-        throw new Error('No signature in this transaction');
+            throw new Error('No signature in this transaction');
         }
 
         const publicKey = this.elliptic.keyFromPublic(this.from.addr);
