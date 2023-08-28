@@ -1,6 +1,6 @@
 import { ec } from "elliptic";
 
-type keyPair = { publicKey: string; privateKey: string };
+export type keyPair = { publicKey: string; privateKey: string };
 
 export interface EllipticCurve {
     keyFromPublic(pk: string): ec.KeyPair;

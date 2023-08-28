@@ -5,22 +5,72 @@ import { NetworkInterfaceInfo, networkInterfaces } from "node:os";
 import { TransactionInterface } from "../transaction";
 import { Node } from "./blockchain.interface";
 import { Block, BlockInterface } from "../block";
+import { EllipticCurve, Secp256k1, keyPair } from "../ec";
 
 export class Blockchain implements Node {
 
-    public addr: string;
+    /** Information about current (me) node */
+    
+    /*
+        * Keypair of the current node
+        * We need this to sign transactions
+    */
+    private keypair: keyPair;
+    
+    /*
+        * Ip address of the node
+        * Without public ip address, it would be impossible to establish communication between nodes 
+    */
+    public addr: string; 
     public balance: number;
 
-    public nodeToBalance: Map<Node, number>;
-    public transactionsHistory: Array<TransactionInterface>;
+    
+    /** Information about other nodes in the chain */
+
+    /*
+        * Map to quickly retreive balance of a node
+        * <publicKey, balance>
+    */
+    public nodeToBalance: Map<string, number>;
+
+    /*
+        * All performed transactions in the blockchain
+        * Usage of this array to save history of the transactions
+    */
+    public transactionsHistory: Array<TransactionInterface>; 
+    
+    /* 
+        * Currently pending transactions
+        * We need this to pack transactions in the single block after block will be mined
+    */
     private pendingTransactions: Array<TransactionInterface>;
 
+    /*
+        * Actual blockchain data structure
+        * Every block is saved here
+    */
     public chain: Array<BlockInterface>;
-    public addresses: Array<string>;
-    private emitter: EventEmitter;
 
-    public constructor() {
-        this.nodeToBalance = new Map<Node, number>();
+    /*
+        * All public ip addresses that are in the chain
+        * For gossiping we need to have ip address of all node in the chain
+        * Event broadcasting is just sending data to all of the address
+    */
+    public addresses: Array<string>;
+
+    /*
+        * Event emitter to handle event-driven architecture
+    */
+    private readonly emitter: EventEmitter;
+
+    public constructor(
+        /*
+            * We need some elliptic curve to handle cryptography
+            * Let's use secp256k1 as it is used in Bitcoin
+        */
+        private readonly elliptic: EllipticCurve = new Secp256k1()
+    ) {
+        this.nodeToBalance = new Map<string, number>();
 
         this.transactionsHistory = new Array<TransactionInterface>();
         this.pendingTransactions = new Array<TransactionInterface>();
@@ -31,6 +81,8 @@ export class Blockchain implements Node {
         
         this.addr = this.getIpAddr();
         this.balance = 0;
+
+        this.keypair = this.elliptic.generateKeyPair();
     }
 
     public start() {
@@ -70,9 +122,12 @@ export class Blockchain implements Node {
 
     private handleNewTransaction(tx: TransactionInterface) {
     
+        if(!tx.isValid()) throw new Error("Invalid transaction");
+
         const from = tx.getFromAddr();
-        const to = tx.getToAddr();
         const amount = tx.getAmount();
+
+        if(!this.hasSufficientBalance(from.addr, amount)) throw new Error("Insufficient balance");
 
         this.transactionsHistory.push(tx);
 
@@ -80,21 +135,51 @@ export class Blockchain implements Node {
     }
 
     private handleNewNode(node: Node) {
-        this.nodeToBalance.set(node, 0);
+        this.nodeToBalance.set(node.publicKey, 0);
         log(`${node.addr} has been added to chain`);
     }
 
     /** HELPERS */
+
+    private hasSufficientBalance(address: string, amount: number) {
+        
+        let currentBalance = this.nodeToBalance.get(address) as number;
+        let futureBalance = currentBalance - amount;
+        
+        /*
+            If amount is already more than balance,
+            we no longer need to loop through the pending transactions
+        */
+        if(futureBalance >= 0) throw new Error("Insufficient balance");
+
+        /*
+            Make sure that we include pending transactions in the user balance
+        */
+        for(let tx of this.pendingTransactions) {
+            if(tx.getFromAddr().addr === address) {
+                futureBalance += tx.getAmount();
+            }
+            if(tx.getToAddr().addr === address) {
+                futureBalance -= tx.getAmount();
+            }
+        }
+
+        return futureBalance >= 0;
+    }
 
     private genesisBlock() {
         const genesis = new Block(Date.now(), [], "0");
         return new Array<BlockInterface>(genesis); 
     }
 
-    private get latestBlock() { return this.chain[this.chain.length - 1]; }
-
     private getIpAddr() {
         const result = networkInterfaces().wlp2s0 as Array<NetworkInterfaceInfo>;
         return result[0].address;
     }
+
+    public get publicKey() {
+        return this.keypair.publicKey;
+    }
+
+    private get latestBlock() { return this.chain[this.chain.length - 1]; }
 }

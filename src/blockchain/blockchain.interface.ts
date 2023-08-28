@@ -8,7 +8,7 @@ export interface Node {
     balance: number;
 
     /* Information about other nodes in the chain */
-    nodeToBalance: Map<Node, number>;
+    nodeToBalance: Map<string, number>;
     transactionsHistory: Array<TransactionInterface>;
     chain: Array<BlockInterface>;
     addresses: Array<string>;
@@ -16,4 +16,6 @@ export interface Node {
     start(): void;
     addNode(addr: Node): void;
     addTransaction(tx: TransactionInterface): void;
+    get publicKey(): string;
+
 }
